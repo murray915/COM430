@@ -1,48 +1,66 @@
-import sqlite3 as sql3
 import os.path
-
-def db_connect_sql_select(sql_query: str, query_type: str):
-    """func. to select sql query. input quer and query type, fetch ALL/ONE/MANY"""
-    
-    try:        
-        # Get absolut path from file, return path & join to db name
-        # Setup db connection var with path
-        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "parana.db")
-        db = sql3.connect(db_path)
-        
-        # Action input sql with db var
-        with db:
-            curser = db.cursor()
-            curser.execute(sql_query)
-
-            if query_type == 'ALL':
-                pull_data = curser.fetchall()
-            elif query_type == 'ONE':
-                pull_data = curser.fetchone()
-            else:
-                pull_data = curser.fetchmany()
-
-        return pull_data
-    
-    except Exception as err: # Exception Block. Return data to user & input
-        print(f"Unexpected {err=}, {type(err)=}")
+import sqlite3
 
 
-def login_check(user_id):
+class Database:
+    def __init__(self, name):
+        self.path = os.path.dirname(os.path.abspath(__file__))
+        self.fullpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), name)
+        self._conn = sqlite3.connect(self.fullpath)
+        self._cursor = self._conn.cursor()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    @property
+    def connection(self):
+        return self._conn
+
+    @property
+    def cursor(self):
+        return self._cursor
+
+    def commit(self):
+        self.connection.commit()
+
+    def close(self, commit=True):
+        if commit:
+            self.commit()
+        self.connection.close()
+
+    def execute(self, sql):
+        self.cursor.execute(sql)
+
+    def fetchall(self):
+        return self.cursor.fetchall()
+
+    def fetchone(self):
+        return self.cursor.fetchone()
+
+    def query(self, sql, params=None):
+        self.cursor.execute(sql, params or ())
+        return self.fetchall()
+            
+
+
+def login_check(database, user_id):
     """ User_id check. DB call to confirm login user exists """
     
     # Setup params. SQL query & return level (query_type). ALL/ONE/MANY
-    user_exists = False
-    sql_query = "SELECT shopper_id FROM shoppers;"
-    query_type = "ALL"
- 
-    data = db_connect_sql_select(sql_query, query_type)
-        
-    for x, y in data:
-        if y == user_id:       
-            user_exists = True
+    sql = "SELECT shopper_id, shopper_first_name, shopper_surname FROM shoppers WHERE shopper_id = (?);"    
+    data = None
+    data = database.query(sql, (user_id,))
 
-    return user_exists
+    if data is not None:
+        for d in data:
+            first_nam = d[1]
+            second_nam = d[2]
+            data = first_nam + ' ' + second_nam
+
+    return data
 
 
 
