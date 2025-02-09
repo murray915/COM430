@@ -1,0 +1,6 @@
+
+Helpful links:
+
+    https://stackoverflow.com/questions/38076220/python-mysqldb-connection-in-a-clas
+        https://stackoverflow.com/questions/1984325/explaining-pythons-enter-and-exit
+    https://docs.python.org/3/library/sqlite3.html#sqlite3-tutorial

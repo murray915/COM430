@@ -5,7 +5,7 @@ import sqlite3
 class Database:
     def __init__(self, name):
         self.path = os.path.dirname(os.path.abspath(__file__))
-        self.fullpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), name)
+        self.fullpath = os.path.join(self.path, name)
         self._conn = sqlite3.connect(self.fullpath)
         self._cursor = self._conn.cursor()
 
@@ -50,10 +50,12 @@ def login_check(database, user_id):
     """ User_id check. DB call to confirm login user exists """
     
     # Setup params. SQL query & return level (query_type). ALL/ONE/MANY
-    sql = "SELECT shopper_id, shopper_first_name, shopper_surname FROM shoppers WHERE shopper_id = (?);"    
+    sql = "SELECT shopper_id, shopper_first_name, shopper_surname \
+        FROM shoppers WHERE shopper_id = (?);"    
     data = None
     data = database.query(sql, (user_id,))
 
+    # If data returned, pull first/last nam as data output
     if data is not None:
         for d in data:
             first_nam = d[1]
