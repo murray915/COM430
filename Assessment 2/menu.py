@@ -27,7 +27,7 @@ class Menu:
             if user_input.upper() == "X":
                 self.exit = True
 
-            self.user_input = user_input.lower()
+            self.user_input = user_input
             return user_input.upper()
 
         except Exception as err: # Exception Block. Return data to user & input
@@ -35,9 +35,9 @@ class Menu:
     
 
     def call_fuction(self):
-        """ User input from Menu. Nav to call next func """        
+        """ User input from Menu. Nav to call next func """ 
         func = getattr(prs, self.user_input)
-        func()
+        func(self.user_input)
 
 
 main_menu = Menu({

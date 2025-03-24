@@ -1,0 +1,43 @@
+SELECT
+    categories.category_description AS [Category Description]
+    ,products.product_code AS [Product Code]
+    ,products.product_description AS [Product Description]
+    ,CASE 
+        WHEN avg_product_id IS NOT NULL THEN ROUND(avg_product_id, 2) 
+            ELSE 0 
+        End AS [Avg Qty Sold]
+    ,ROUND(avg_cat_id, 2) AS [Avg Qty Sold for Category]
+    
+
+FROM products
+    -- f. Out. Join to ensure all products are pulled AND all products ordered
+    -- linked on product_id
+    FULL OUTTER JOIN ordered_products ON ordered_products.product_id = products.product_id	
+    -- linked on product_id. 1 to 1 relationship
+    INNER JOIN categories ON categories.category_id = products.category_id
+    -- Left Join as not all products are ordered. 
+    -- NULL valid handled within main query      
+    LEFT JOIN (
+        SELECT
+              product_id as ord_pro_id
+              ,AVG(quantity) as avg_product_id
+                                                    
+        FROM ordered_products
+        WHERE ordered_product_status <> 'Cancelled'
+        Group by ordered_products.product_id) AS avg_product_id_data ON ord_pro_id = products.product_id
+    -- Left Join as not all products are ordered. 
+    -- NULL valid handled within main query   
+    LEFT JOIN (
+        SELECT
+              products.category_id AS cat_pro_id
+              ,AVG(ordered_products.quantity) as avg_cat_id
+                                                  
+        FROM ordered_products
+            INNER JOIN products ON ordered_products.product_id = products.product_id
+        WHERE cat_pro_id = products.category_id
+            AND ordered_product_status <> 'Cancelled'
+        GROUP BY products.category_id) AS avg_cat_id_data on cat_pro_id = products.category_id
+
+    WHERE [Avg Qty Sold] < [Avg Qty Sold for Category]
+    GROUP BY [Product Code]
+    ORDER BY [Category Description], [Product Description] ASC;

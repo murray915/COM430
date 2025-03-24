@@ -1,0 +1,38 @@
+SELECT    
+    sellers.seller_account_ref AS [Seller Account Ref]
+    ,sellers.seller_name AS [Seller Name]     
+    ,prod.product_code AS [Product Code]
+    ,prod.product_description AS [Product Description]        
+    ,CASE 
+        WHEN COUNT(ordered_products.order_id) IS NOT NULL THEN COUNT(ordered_products.order_id) 
+            ELSE 0 
+        END AS [No. of Orders]
+    ,CASE 
+        WHEN summ_qty_orders IS NOT NULL THEN summ_qty_orders 
+            ELSE 0 
+        END AS [Total quantity Sold]    
+    ,CASE WHEN summ_qty_orders IS NOT NULL THEN CONCAT('£',ROUND(summ_qty_orders * ordered_products.price, 2)) 
+            ELSE 0 
+        END AS [Total Value of Sales]
+    
+    FROM product_sellers
+      
+        FULL OUTTER INNER JOIN ordered_products ON ordered_products.seller_id = product_sellers.seller_id AND ordered_products.product_id = product_sellers.product_id 
+        INNER JOIN sellers ON product_sellers.seller_id = sellers.seller_id         
+        INNER JOIN products prod ON prod.product_id = product_sellers.product_id
+        LEFT JOIN
+                (
+                    SELECT
+                        ordered_products.product_id AS prod_id_order_data
+                        ,ordered_products.seller_id AS seller_id_order_data
+                        ,SUM(ordered_products.quantity) AS summ_qty_orders
+                        ,COUNT(ordered_products.order_id) AS no_orders
+                        
+                    FROM ordered_products
+                    GROUP BY ordered_products.seller_id, ordered_products.product_id) AS order_data
+                                            ON seller_id_order_data = product_sellers.seller_id AND prod_id_order_data = product_sellers.product_id
+        
+
+    GROUP BY product_sellers.seller_id, product_sellers.product_id
+    ORDER BY [Total Value of Sales] ASC;
+	

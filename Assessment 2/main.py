@@ -14,8 +14,8 @@ with prc.Database("parana.db") as db:
 
         while mn.main_menu.exit != True:
             mn.main_menu.menu_navigation()        
-            
+             
             if mn.main_menu.exit != True:
-                mn.main_menu.call_fuction(user_id)
+                mn.main_menu.call_fuction()
     else:
         vis.failed_login()

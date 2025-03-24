@@ -1,0 +1,15 @@
+SELECT
+    shopper_first_name AS [Shopper First Name]
+    ,shopper_surname AS [Shopper Surname]
+    ,shopper_email_address AS [Email Address]
+    ,CASE 
+        WHEN gender IS NULL THEN 'Not Known'
+            ELSE gender 
+        END AS [Gender]        
+    ,STRFTIME('%d-%m-%Y', date_joined) AS [Date Joined]
+    ,CAST(STRFTIME('%Y.%m%d', 'now') - STRFTIME('%Y.%m%d', date_of_birth) AS int) AS [Current Age]
+   
+FROM shoppers
+
+    WHERE [Gender] = 'F' OR date_joined >= '2020-01-01'
+    ORDER BY [Gender], [Current Age] DESC;

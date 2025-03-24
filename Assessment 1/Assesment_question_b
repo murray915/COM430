@@ -1,0 +1,22 @@
+SELECT 
+    shoppers.shopper_first_name AS [Shopper First Name]
+    ,shoppers.shopper_surname AS [Shopper Surname]
+    ,shopper_orders.order_id AS [Order ID]
+    ,STRFTIME('%d-%m-%Y', shopper_orders.order_date) AS [Order Date]
+    ,prod.product_description AS [Product Description]
+    ,sel.seller_name AS [Seller Name]
+    ,ordered_products.quantity AS [Qty Ordered]
+    ,CONCAT('£', ROUND(ordered_products.price, 2)) AS [Price]
+    ,shopper_orders.order_status AS [Order Status]
+	   
+
+FROM shopper_orders
+    INNER JOIN shoppers ON shoppers.shopper_id = shopper_orders.shopper_id
+    INNER JOIN ordered_products ON ordered_products.order_id = shopper_orders.order_id    	
+    INNER JOIN products prod ON prod.product_id = ordered_products.product_id							
+    INNER JOIN sellers sel ON sel.seller_id = ordered_products.seller_id
+
+--WHERE shopper_orders.shopper_id = 10000
+--WHERE shopper_orders.shopper_id = 10019
+
+ORDER BY [Order Date] DESC;

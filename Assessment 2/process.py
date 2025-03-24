@@ -68,20 +68,20 @@ def login_check(database, user_id):
 
 
 
-def a():
-    print('Success - a called')
+def a(user_id):
+    print('\n\nSuccess - a called\n\n')
 
-def b():
-    print('Success - b called')
+def b(user_id):
+    print('\n\nSuccess - b called\n\n')
 
-def c():
-    print('Success - c called')
+def c(user_id):
+    print('\n\nSuccess - c called\n\n')
 
-def d():
-    print('Success - d called')
+def d(user_id):
+    print('\n\nSuccess - d called\n\n')
 
-def e():
-    print('Success - e called')
+def e(user_id):
+    print('\n\nSuccess - e called\n\n')
 
-def f():
-    print('Success - f called')
+def f(user_id):
+    print('\n\nSuccess - f called\n\n')
