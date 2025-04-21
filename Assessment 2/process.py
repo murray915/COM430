@@ -46,7 +46,7 @@ class Database:
             
 
 
-def login_check(database, user_id):
+def login_check(database, user_id) -> str:
     """ User_id check. DB call to confirm login user exists """
     
     # Setup params. SQL query & return level (query_type). ALL/ONE/MANY
@@ -62,14 +62,31 @@ def login_check(database, user_id):
             second_nam = d[2]
             data = first_nam + ' ' + second_nam
 
-    return data
+        return data
+    return
 
+def a(database, user_id) -> str:
+    """ Display your order history """
 
+    sql = "SELECT basket_id \
+            FROM shopper_baskets \
+            WHERE shopper_id = (?) \
+            AND DATE(basket_created_date_time) = DATE('now') \
+            ORDER BY basket_created_date_time DESC \
+            LIMIT 1;"
+    
+    data = None
+    data = database.query(sql, (user_id,))
 
+    # If data returned, pull first/last nam as data output
+    if data is not None:
+        for d in data:
+            first_nam = d[1]
+            second_nam = d[2]
+            data = first_nam + ' ' + second_nam
 
-
-def a(user_id):
-    print('\n\nSuccess - a called\n\n')
+        return data
+    return
 
 def b(user_id):
     print('\n\nSuccess - b called\n\n')
