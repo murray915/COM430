@@ -25,6 +25,9 @@ class Database:
     def commit(self):
         self.connection.commit()
 
+    def rollback(self):
+        self.connection.rollback()       
+
     def close(self, commit=True):
         if commit:
             self.commit()
@@ -33,12 +36,12 @@ class Database:
     def execute(self, sql):
         self.cursor.execute(sql)
 
+    def insert(self, sql, params=None):
+        self.cursor.execute(sql, params or ())
+
     def fetchall(self):
         names = [description[0] for description in self.cursor.description]
         return [names,self.cursor.fetchall()]
-
-    def fetchone(self):
-        return self.cursor.fetchone()
 
     def query(self, sql, params=None):
         self.cursor.execute(sql, params or ())
