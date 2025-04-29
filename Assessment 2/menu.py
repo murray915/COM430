@@ -1,66 +1,53 @@
-import process as prs
-from prettytable import PrettyTable
+def display_options(all_options: list, title:str, type: str) -> str | bool:
+    """
+    query_rows: must consist of two values - id and description i.e. the category_id and category_description.
+    title: is some text to put above the list of options to act as a title.
+    type: is used to customise the prompt to make it appropriate for what you want the user to select.
+    """
+    try:
+        option_num = 1
+        option_list = []
 
-class Menu:
-    def __init__(self, headers: list, options: list):
-        """ Menu Attributes"""
-        self.headers = headers
-        self.options = options
-        self.exit = False
+        print("\n",title,"\n")
 
-    def menu_navigation(self):        
-        """ Menu print & user selection """        
-        self.user_input = None
-        self.select_option = None
+        for option in all_options:
+            code = option[0]
+            desc = option[1]
 
-        try:
-            self.print_table()
-            self.user_input = input() 
-
-            #Force user to input required option/list only. Loop until accepted            
-            if self.user_input is None:
-                while self.select_option is None:
-                    self.user_input = input('Invalid user choice. Please re-enter.\n')
-
-                    for i in self.options:
-                        for j in i:
-                            if j == self.user_input.upper():
-                                self.select_option = i[1]
+            print("{0}.\t{1}".format(option_num, desc))
             
-            #Return user input value (from list), then return to main
-            print(f'You have chosen option {self.user_input.upper()} - {self.select_option}')
+            option_num = option_num + 1
+            option_list.append(code)
+
+        selected_option = 0
+
+        while selected_option > len(option_list) or selected_option == 0:
+            prompt = input("\nEnter the number against the "+type+" you want to choose: ")
             
-            if self.user_input.upper() == "X":
-                self.exit = True
-
-            self.user_input = self.user_input
-            return self.user_input.upper()
-
-        except Exception as err: # Exception Block. Return data to user & input
-            print(f"Unexpected {err=}, {type(err)=}. From user input ; {self.user_input}")
+            if not prompt.isnumeric():
+                print(f'\n* ERROR * : Please enter only numbers (int)')
+                selected_option = 0
+            else:
+                selected_option = int(prompt)
+                
+        return option_list[selected_option - 1]
+    
+    except Exception as err: # Exception Block. Return data to user & False
+        print(f"\n\n** Unexpected {err=}, {type(err)=} \n\n **")
+        return False
     
 
-    def print_table(self):
-        table = PrettyTable()
-        table.field_names = self.headers
-        table.add_rows(self.options)
-
-        print(table)
-
-
-    def call_fuction(self):
-        """ User input from Menu. Nav to call next func """ 
-        if self.user_input is not None:
-            func = getattr(prs, self.user_input)
-            func(self.user_input)
-
-
-main_menu = Menu(["Option", "Description"],[
-    ["A","Display your order history"],
-    ["B", "Add an item to your basket"],
-    ["C", "View your basket"],
-    ["D", "Change the quantity of an item in your basket"],
-    ["E", "Remove an item from your basket"],
-    ["F", "Checkout"],
-    ["X", "Exit"]
-    ])
+def main_menu() -> int:
+   """ main menu var """
+   
+   ouput = display_options([
+        [1, 'Display your order history'],
+        [2, "Add an item to your basket"],
+        [3, "View your basket"],
+        [4, "Change the quantity of an item in your basket"],
+        [5, "Remove an item from your basket"],
+        [6, "Checkout"],
+        [7, "Exit"]
+        ],'PARANÁ – SHOPPER MAIN MENU','menu options')
+   
+   return ouput

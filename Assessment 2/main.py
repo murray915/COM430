@@ -1,23 +1,26 @@
 import menu as mn
-import process as prc
+import database as db
 import visuals as vis
+import login_check as lch
+import options_process as optpr
 
+vis.welcome_screen()
 
-user_id = input("\nEnter your shopper ID : ")
-
-with prc.Database("parana.db") as db:
+with db.Database("parana.db") as db:
     database = db
-    data = prc.login_check(db, user_id)
-    
-    if data:    
-        vis.welcome_screen(data)
+    main_selection = None
+    data, user_id = lch.login_process(database)
 
-        while mn.main_menu.exit != True:
-            mn.main_menu.menu_navigation()
-             
-            if mn.main_menu.exit != True:
-                 mn.main_menu.call_fuction()
-    else:
-        vis.failed_login()
+    if user_id:
+        vis.welcome_screen_post_login(data)
 
+        while main_selection != 7:
+            main_selection = mn.main_menu()
+            
+            # Call user_input func
+            # 7 = exit
+            if main_selection != 7:
+                func = getattr(optpr, 'mn_func_' + str(main_selection))
+                func(db, user_id)
 
+    vis.exit_screen()

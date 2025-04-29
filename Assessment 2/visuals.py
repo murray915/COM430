@@ -1,4 +1,7 @@
-def welcome_screen(data: str):
+from tabulate import tabulate
+
+
+def welcome_screen() -> None:
     """Input data, first name / surname printout"""
     print(
             '\n'
@@ -7,17 +10,27 @@ def welcome_screen(data: str):
             '        Welcome to Paraná            '
             '\n'
             '-------------------------------------'
+            )
+
+
+def welcome_screen_post_login(user_id: str) -> None:
+    """Input data, first name / surname printout"""
+    print(
             '\n'
             '-------------------------------------'
             '\n'
-            f' Login User :   {data}              '
+            '----------- Login Successful --------'
+            '\n'
+            '-------------------------------------'
+            '\n'
+            f' Login User :   {user_id}              '
             '\n'
             '-------------------------------------'
             '\n'
             )
 
 
-def failed_login():
+def failed_login() -> None:
     """"Failed login, printout"""
     print(
         '-------------------------------------'
@@ -26,7 +39,44 @@ def failed_login():
         '\n'
         '   Shopper ID has not been found     '
         '\n'
-        '   Please input a valid shopper ID.  '
+        '   Please input a valid shopper ID   '
+        '\n'
+        '  or input "exit", to close program  '
         '\n'
         '-------------------------------------'
         )
+    
+
+def exit_screen() -> None:
+    """"exit screen, printout"""
+    print(
+        '\n'
+        '-------------------------------------'
+        '\n'
+        '----- Thank you for shopping at -----'
+        '\n'
+        '-------------------------------------'
+        '\n'
+        '-------------- Paraná ---------------'
+        '\n'
+        '-------------------------------------'
+        '\n'
+        )
+    
+    quit()
+
+
+def print_sql_data(sql_headers: list, data: list) -> None:
+    """
+    headers: str(s) within list
+    data: sql returned raw data
+    """   
+    output = []
+
+    for i in data:
+        output.append(list(i))
+
+    print(tabulate(
+        output, 
+        headers=sql_headers
+        ))
