@@ -1,6 +1,5 @@
 from tabulate import tabulate
 
-
 def display_options(all_options: list, title:str, type: str) -> str | bool:
     """
     query_rows: must consist of two values - id and description i.e. the category_id and category_description.

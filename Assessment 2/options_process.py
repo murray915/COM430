@@ -1,5 +1,6 @@
 import visuals as vis
-
+import database as dab
+import user_input_checks as usimp
 
 def mn_return_prv_basket(db: object, user_id: int) -> str | bool:
     """ return previous basket if found from today """
@@ -104,7 +105,7 @@ def mn_func_2(db: object, user_id: int) -> bool:
 
         # sql query, not var input from above return
         sql = "SELECT \
-                concat(sel.seller_name,' (',PRINTF('£%.2f',prcsel.price),')') \
+                concat(sel.seller_name,' (',PRINTF('£%9.2f',prcsel.price),')') \
                 ,prcsel.price \
                 ,sel.seller_id \
                 FROM product_sellers prcsel \
@@ -155,27 +156,27 @@ def mn_func_2(db: object, user_id: int) -> bool:
             # create new basket
             sql = "INSERT INTO shopper_baskets (shopper_id, basket_created_date_time) VALUES((?),DATE('now'));"
             db.insert(sql,(user_id,))
+            db.commit()
             basket_id = mn_return_prv_basket(db, user_id)
+        
+        # with basket_id, add values to the basket_contents
+        sql = "SELECT basket_id \
+                FROM basket_contents \
+                WHERE basket_id = (?) \
+                AND product_id = (?) \
+                LIMIT 1;"
+        
+        data = db.query(sql, (basket_id,user_input_prd_id))
+
+        # If data returned, return basket_id
+        if len(data[1]) > 0:
+            print(f"\nItem '{user_input_prd}' is already within basket, to update/remove item. Please use the options from main menu\n")
 
         else:
-            # with basket_id, add values to the basket_contents
-            sql = "SELECT basket_id \
-                    FROM basket_contents \
-                    WHERE basket_id = (?) \
-                    AND product_id = (?) \
-                    LIMIT 1;"
-            
-            data = db.query(sql, (basket_id,user_input_prd_id))
-
-            # If data returned, return basket_id
-            if len(data[1]) > 0:
-                print(f"\nItem '{user_input_prd}' is already within basket, to update/remove item. Please use the options from main menu\n")
-
-            else:
-                sql = "INSERT INTO basket_contents (basket_id,product_id,seller_id,quantity,price) VALUES((?),(?),(?),(?),(?));"            
-                db.insert(sql,(basket_id,user_input_prd_id,user_input_seller,user_input_qty,user_input_price))
-                db.commit()
-                print('Item added to your basket')
+            sql = "INSERT INTO basket_contents (basket_id,product_id,seller_id,quantity,price) VALUES((?),(?),(?),(?),(?));"            
+            db.insert(sql,(basket_id,user_input_prd_id,user_input_seller,user_input_qty,user_input_price))
+            db.commit()
+            print('Item added to your basket')
 
 
     except Exception as err: # Exception Block. Return data to user & False
@@ -184,17 +185,113 @@ def mn_func_2(db: object, user_id: int) -> bool:
         return False
 
 
+def mn_func_3(db: object, user_id: int) -> tuple | bool:
+    """ Display current basket """
 
-def mn_func_3(db: object, user_id: int):
-    print('\n\nSuccess - 3 called\n\n')
+    basket_id = mn_return_prv_basket(db, user_id)
+    
+    # with basket_id, add values to the basket_contents
+    sql = "SELECT \
+            prd.product_description as 'Product Description'\
+            ,sel.seller_name as 'Seller Name' \
+            ,bsk.quantity \
+            ,PRINTF('£%9.2f',bsk.price) as 'Price' \
+            ,PRINTF('£%9.2f',bsk.price * bsk.quantity) as 'Total' \
+            FROM basket_contents bsk \
+            JOIN product_sellers prcsel ON prcsel.product_id = bsk.product_id AND prcsel.seller_id = bsk.seller_id \
+            JOIN products prd ON prd.product_id = prcsel.product_id \
+            JOIN sellers sel ON sel.seller_id = prcsel.seller_id \
+            WHERE bsk.basket_id = (?);"
+    
+    data = db.query(sql, (basket_id,))
+
+    sql = "SELECT \
+            PRINTF('£%9.2f',SUM(bsk.price * bsk.quantity)) as 'total' \
+            FROM basket_contents bsk \
+            JOIN product_sellers prcsel ON prcsel.product_id = bsk.product_id AND prcsel.seller_id = bsk.seller_id \
+            JOIN products prd ON prd.product_id = prcsel.product_id \
+            JOIN sellers sel ON sel.seller_id = prcsel.seller_id \
+            WHERE bsk.basket_id = (?);"
+
+    backet_data = db.query(sql, (basket_id,))
+
+    # data check
+    if data[1]:
+        header_list = data[0]
+        data_list = data[1]
+        out_list = []
+        num = 1        
+        header_list.insert(0,'Basket Item Num')
+
+        for data_val in data_list:
+            new_data_list = [num]
+
+            for val in data_val:
+                new_data_list.append(val)
+
+            num += 1
+            out_list.append(tuple(new_data_list))
+
+        out_list_ret = tuple(out_list)
+        out_list.append(['', '', '', '', '', ''])
+        out_list.append(['', '', "Basket Total", '', '', backet_data[1][0][0]])
+        data_list = tuple(out_list)
+
+        print('Basket Contents')
+        print('----------------')
+        vis.print_sql_data(header_list,data_list)
+    else:
+        print('Your basket is empty')
+    
+    if out_list_ret:
+        return out_list_ret
+    else:
+        return False
 
 
-def mn_func_4(db: object, user_id: int):
-    print('\n\nSuccess - 4 called\n\n')
+def mn_func_4(db: object, user_id: int) -> None:
+    """ change qty within user basket """
+
+    # print basket, return values in tuple
+    # No data returned. return to main menu (None)
+    output_data = mn_func_3(db, user_id)
+
+    if not output_data:
+        return None
+
+    # check basket length, 2+ user choose
+    if len(output_data) >= 2:
+        in_list = False
+
+        # check user input is value item no.
+        while in_list:            
+            user_promt_itm = 'Enter the basket item no. of the item you want to change: '
+            output_itm = usimp.check_user_imp_int(user_promt_itm, '-- Please enter a number not a letter --')
+
+            for data in output_data:            
+                if data[0] == output_itm:
+                    in_list = True   
+
+            # if found within data/basket
+            # break to endpoint else error to user
+            if in_list:                
+                break
+            else:
+                print('The basket item no. you have entered is invalid')                
+    else:
+        user_promt_itm = 1
+
+    # Get user input qty as var for sql query
+    user_promt_qty = 'Enter the basket item no. of the item you want to change: '
+    output_qty = usimp.check_user_imp_int(user_promt_qty, 'The quantity must be greater then zero')
 
 
-def mn_func_4(db: object, user_id: int):
-    print('\n\nSuccess - 5 called\n\n')
+    print('Do update -- ASK QTY ')
+
+
+    # Reprint basket post update
+    mn_func_3(db, user_id)
+
 
 
 def mn_func_5(db: object, user_id: int):
