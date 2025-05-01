@@ -36,7 +36,13 @@ class Database:
     def execute(self, sql):
         self.cursor.execute(sql)
 
+    def delete(self, sql, params=None):
+        self.cursor.execute(sql, params or ())
+
     def insert(self, sql, params=None):
+        self.cursor.execute(sql, params or ())
+
+    def update(self, sql, params=None):
         self.cursor.execute(sql, params or ())
 
     def fetchall(self):

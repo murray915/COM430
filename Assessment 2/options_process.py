@@ -2,60 +2,75 @@ import visuals as vis
 import database as dab
 import user_input_checks as usimp
 
+
 def mn_return_prv_basket(db: object, user_id: int) -> str | bool:
     """ return previous basket if found from today """
-
-    sql = "SELECT basket_id \
-            FROM shopper_baskets \
-            WHERE shopper_id = (?) \
-            AND DATE(basket_created_date_time) = DATE('now') \
-            ORDER BY basket_created_date_time DESC \
-            LIMIT 1;"
     
-    data = db.query(sql, (user_id,))
+    try:
+        sql = "SELECT basket_id \
+                FROM shopper_baskets \
+                WHERE shopper_id = (?) \
+                AND DATE(basket_created_date_time) = DATE('now') \
+                ORDER BY basket_created_date_time DESC \
+                LIMIT 1;"
+        
+        data = db.query(sql, (user_id,))
 
-    # If data returned, return basket_id
-    if len(data[1]) > 0:
-        return data[1][0][0]
-    else:
+        # If data returned, return basket_id
+        if len(data[1]) > 0:
+            return data[1][0][0]
+        else:
+            return False
+
+
+    except Exception as err: # Exception Block. Return data to user & False
+        print(f"\n\n** Unexpected {err=}, {type(err)=} ** \n\n")
+        db.rollback()
         return False
-
+    
 
 def mn_func_1(db: object, user_id: int) -> None:
     """ Display your order history """
 
-    # sql query, single var input
-    sql = "SELECT \
-                shopper_orders.order_id AS [Order ID] \
-                ,STRFTIME('%d-%m-%Y', shopper_orders.order_date) AS [Order Date] \
-                ,prod.product_description AS [Product Description] \
-                ,sel.seller_name AS [Seller Name] \
-                ,CONCAT('£', ROUND(ordered_products.price, 2)) AS [Price] \
-                ,ordered_products.quantity AS [Qty Ordered] \
-                ,shopper_orders.order_status AS [Order Status] \
+    try:
+        # sql query, single var input
+        sql = "SELECT \
+                    shopper_orders.order_id AS [Order ID] \
+                    ,STRFTIME('%d-%m-%Y', shopper_orders.order_date) AS [Order Date] \
+                    ,prod.product_description AS [Product Description] \
+                    ,sel.seller_name AS [Seller Name] \
+                    ,CONCAT('£', ROUND(ordered_products.price, 2)) AS [Price] \
+                    ,ordered_products.quantity AS [Qty Ordered] \
+                    ,shopper_orders.order_status AS [Order Status] \
+                    \
+                FROM shopper_orders \
+                    INNER JOIN shoppers ON shoppers.shopper_id = shopper_orders.shopper_id \
+                    INNER JOIN ordered_products ON ordered_products.order_id = shopper_orders.order_id \
+                    INNER JOIN products prod ON prod.product_id = ordered_products.product_id \
+                    INNER JOIN sellers sel ON sel.seller_id = ordered_products.seller_id \
+                    \
+                WHERE shopper_orders.shopper_id = (?) \
                 \
-            FROM shopper_orders \
-                INNER JOIN shoppers ON shoppers.shopper_id = shopper_orders.shopper_id \
-                INNER JOIN ordered_products ON ordered_products.order_id = shopper_orders.order_id \
-                INNER JOIN products prod ON prod.product_id = ordered_products.product_id \
-                INNER JOIN sellers sel ON sel.seller_id = ordered_products.seller_id \
-                \
-            WHERE shopper_orders.shopper_id = (?) \
-            \
-            ORDER BY shopper_orders.order_date DESC;"
+                ORDER BY shopper_orders.order_date DESC;"
+        
+        data = db.query(sql, (user_id,))
+        
+        # data check
+        if data[1]:
+            header_list = data[0]
+            data_list = data[1]
+
+            vis.print_sql_data(header_list,data_list)
+        else:
+            print('No orders placed by this customer')
+
+        return True
     
-    data = db.query(sql, (user_id,))
+    except Exception as err: # Exception Block. Return data to user & False
+        print(f"\n\n** Unexpected {err=}, {type(err)=} ** \n\n")
+        db.rollback()
+        return False
     
-    # data check
-    if data[1]:
-        header_list = data[0]
-        data_list = data[1]
-
-        vis.print_sql_data(header_list,data_list)
-    else:
-        print('No orders placed by this customer')
-
-
 def mn_func_2(db: object, user_id: int) -> bool:
     """ add item to your basket """
 
@@ -170,7 +185,7 @@ def mn_func_2(db: object, user_id: int) -> bool:
 
         # If data returned, return basket_id
         if len(data[1]) > 0:
-            print(f"\nItem '{user_input_prd}' is already within basket, to update/remove item. Please use the options from main menu\n")
+            print(f"\n *** Item '{user_input_prd}' is already within basket, to update/remove item. Please use the options from main menu *** \n")
 
         else:
             sql = "INSERT INTO basket_contents (basket_id,product_id,seller_id,quantity,price) VALUES((?),(?),(?),(?),(?));"            
@@ -189,7 +204,8 @@ def mn_func_3(db: object, user_id: int) -> tuple | bool:
     """ Display current basket """
 
     basket_id = mn_return_prv_basket(db, user_id)
-    
+    out_list_ret = False
+
     # with basket_id, add values to the basket_contents
     sql = "SELECT \
             prd.product_description as 'Product Description'\
@@ -249,54 +265,141 @@ def mn_func_3(db: object, user_id: int) -> tuple | bool:
         return False
 
 
-def mn_func_4(db: object, user_id: int) -> None:
+def mn_func_4(db: object, user_id: int) -> bool:
     """ change qty within user basket """
 
-    # print basket, return values in tuple
-    # No data returned. return to main menu (None)
-    output_data = mn_func_3(db, user_id)
+    try:
+        # print basket, return values in tuple
+        # No data returned. return to main menu (None)
+        output_data = mn_func_3(db, user_id)
 
-    if not output_data:
-        return None
+        if not output_data:
+            return False
+        
+        # check basket length, 2+ user choose else return 0 prd_id
+        output_prd_id = usimp.check_user_imp_prd_id(db, output_data)
 
-    # check basket length, 2+ user choose
-    if len(output_data) >= 2:
-        in_list = False
+        # Get user input qty as var for sql query
+        user_promt_qty = 'Enter the new quantity of the item you want to change: '
+        output_qty = usimp.check_user_imp_int(user_promt_qty, 'The quantity must be greater then zero')
+        basket_id = mn_return_prv_basket(db, user_id)
 
-        # check user input is value item no.
-        while in_list:            
-            user_promt_itm = 'Enter the basket item no. of the item you want to change: '
-            output_itm = usimp.check_user_imp_int(user_promt_itm, '-- Please enter a number not a letter --')
+        # update basket item, inputs prd_id / basket_id & quantity
+        sql = "UPDATE basket_contents SET quantity = (?) WHERE basket_id = (?) AND product_id = (?);"
+        db.update(sql,(output_qty,basket_id,output_prd_id))
+        db.commit()
 
-            for data in output_data:            
-                if data[0] == output_itm:
-                    in_list = True   
+        # Reprint basket post update
+        mn_func_3(db, user_id)
 
-            # if found within data/basket
-            # break to endpoint else error to user
-            if in_list:                
-                break
-            else:
-                print('The basket item no. you have entered is invalid')                
-    else:
-        user_promt_itm = 1
+        return True
 
-    # Get user input qty as var for sql query
-    user_promt_qty = 'Enter the basket item no. of the item you want to change: '
-    output_qty = usimp.check_user_imp_int(user_promt_qty, 'The quantity must be greater then zero')
+    except Exception as err: # Exception Block. Return data to user & False
+        print(f"\n\n** Unexpected {err=}, {type(err)=} ** \n\n")
+        db.rollback()
+        return False  
+
+def mn_func_5(db: object, user_id: int) -> bool | None:
+    """ Remove an item from your basket """
+
+    try:        
+        # print basket, return values in tuple
+        # No data returned. return to main menu (None)
+        output_data = mn_func_3(db, user_id)
+
+        if not output_data:
+            return None
+        
+        # check basket length, 2+ user choose else return 0 prd_id
+        prd_id = usimp.check_user_imp_prd_id(db, output_data)
+        basket_id = mn_return_prv_basket(db, user_id)
+
+        # get user confirmation of delete
+        user_check = 0
+        
+        while user_check != 'N' or user_check != 'Y':
+            user_check = input(f'Do you wish to remove item {prd_id} from your basket? Y/N  : ')
+
+            if user_check.upper() == 'N':
+                return None
+            
+            elif user_check.upper() == 'Y':
+
+                # delete basket item, inputs prd_id / basket_id
+                sql = "DELETE FROM basket_contents WHERE basket_id = (?) AND product_id = (?);"
+                db.delete(sql,(basket_id,prd_id))
+
+                # Reprint basket post update
+                mn_func_3(db, user_id)
+
+                db.commit()
+                return True
+        
+    except Exception as err: # Exception Block. Return data to user & False
+        print(f"\n\n** Unexpected {err=}, {type(err)=} ** \n\n")
+        db.rollback()
+        return False        
 
 
-    print('Do update -- ASK QTY ')
+def mn_func_6(db: object, user_id: int) -> bool | None:
+    """ checkout your basket """
 
+    try:
+        # print basket, return values in tuple
+        # No data returned. return to main menu (None)
+        output_data = mn_func_3(db, user_id)
 
-    # Reprint basket post update
-    mn_func_3(db, user_id)
+        if not output_data:
+            return None
 
+        # get user confirmation of checkout
+        user_check = 0
 
+        while user_check != 'N' or user_check != 'Y':
+            user_check = input(f'Do you wish to checkout your basket? Y/N  : ')
 
-def mn_func_5(db: object, user_id: int):
-    print('\n\nSuccess - 6 called\n\n')
+            if user_check.upper() == 'N':
+                return None
+            
+            elif user_check.upper() == 'Y':
 
+                basket_id = mn_return_prv_basket(db, user_id)
 
-def mn_func_6(db: object, user_id: int):
-    print('\n\nSuccess - 7 called\n\n')
+                # create shopper_orders
+                sql = "INSERT INTO shopper_orders (shopper_id,order_date,order_status) VALUES((?),DATE('now'),'Placed');"            
+                db.insert(sql,(user_id,))
+
+                # get next order_id in sequence
+                sql = "SELECT MAX(order_id) FROM shopper_orders ORDER BY order_id DESC;"
+                order_id = db.query(sql, ())
+                order_id = int(order_id[1][0][0]) +1
+
+                # get basket_contents via basket_id
+                sql = "SELECT product_id,seller_id,quantity,price,'Placed' FROM basket_contents WHERE basket_id = (?);"            
+                basket_contents = db.query(sql, (basket_id,))
+                            
+                # insert by basket_contents values into ordered_products
+                # each basket_content used as params for insert sql
+                for data in basket_contents[1]:
+                    data = list(data)
+                    data.insert(0, order_id)
+                    data = tuple(data)
+
+                    # create & get next id in sequence - shopper_orders data (order_id)
+                    sql = "INSERT INTO ordered_products (order_id,product_id,seller_id,quantity,price,ordered_product_status) VALUES((?),(?),(?),(?),(?),(?));"            
+                    db.insert(sql,data)       
+
+                # delete basket_contents
+                sql = "DELETE FROM basket_contents WHERE basket_id = (?);"
+                db.delete(sql,(basket_id,))
+
+                # commit assuming no errors
+                db.commit()
+
+                print(f'\n Checkout complete, your order has been placed \n')
+                return True
+            
+    except Exception as err: # Exception Block. Return data to user & False
+        print(f"\n\n** Unexpected {err=}, {type(err)=} ** \n\n")
+        db.rollback()
+        return False
