@@ -1,35 +1,9 @@
 import visuals as vis
 import database as dab
 import user_input_checks as usimp
+ 
 
-
-def mn_return_prv_basket(db: object, user_id: int) -> str | bool:
-    """ return previous basket if found from today """
-    
-    try:
-        sql = "SELECT basket_id \
-                FROM shopper_baskets \
-                WHERE shopper_id = (?) \
-                AND DATE(basket_created_date_time) = DATE('now') \
-                ORDER BY basket_created_date_time DESC \
-                LIMIT 1;"
-        
-        data = db.query(sql, (user_id,))
-
-        # If data returned, return basket_id
-        if len(data[1]) > 0:
-            return data[1][0][0]
-        else:
-            return False
-
-
-    except Exception as err: # Exception Block. Return data to user & False
-        print(f"\n\n** Unexpected {err=}, {type(err)=} ** \n\n")
-        db.rollback()
-        return False
-    
-
-def mn_func_1(db: object, user_id: int) -> None:
+def mn_func_1(db: object, user_id: int, basket_id: str) -> None:
     """ Display your order history """
 
     try:
@@ -68,27 +42,27 @@ def mn_func_1(db: object, user_id: int) -> None:
     
     except Exception as err: # Exception Block. Return data to user & False
         print(f"\n\n** Unexpected {err=}, {type(err)=} ** \n\n")
+        print(f'Error occured : Rollback completed. \n')
         db.rollback()
         return False
     
-def mn_func_2(db: object, user_id: int) -> bool:
+    
+def mn_func_2(db: object, user_id: int, basket_id: str) -> bool:
     """ add item to your basket """
 
     try:
         # sql query, not var input, run open
-        sql = "SELECT category_description \
-                FROM categories \
-                ORDER BY category_description;"  
-        
+        sql = "SELECT category_description, category_id FROM categories ORDER BY category_description;" 
         data = db.query(sql,None)
+
         prd_list = []
 
         # Pull cat value & enumirate list for options func
         # display results & request userinput
         for i in range(len(data[1])):
-            prd_list.append((i+1,data[1][i][0]))
+            prd_list.append((i+1,data[1][i][0],data[1][i][1]))
 
-        user_input = vis.display_options(prd_list,'Product Categories','product category')
+        user_input_cat_id = vis.display_options_retur(prd_list,'Product Categories','product category','2')
 
         # sql query, var input from above return
         sql = "SELECT product_description \
@@ -97,26 +71,16 @@ def mn_func_2(db: object, user_id: int) -> bool:
                 WHERE category_id = (?) \
                 ORDER BY product_description;" 
         
-        data = db.query(sql,(user_input,))
+        data = db.query(sql,(user_input_cat_id,))
         prd_list = []
 
         # Pull cat value & enumirate list for options func
         # display results & request userinput
         # end var = userinput index return from selection
         for i in range(len(data[1])):
-            prd_list.append((i+1,data[1][i][0]))
+            prd_list.append((i+1,data[1][i][0],data[1][i][1]))
 
-        user_input_prd = vis.display_options(prd_list,'Products','product')
-        
-        # get prd nam
-        for i in range(len(prd_list[i])):
-            if prd_list[i][0] == user_input_prd:
-                user_input_prd = prd_list[i][1]
-
-        # get actual product_id
-        for i in range(len(data[1])):
-            if data[1][i][0] == user_input_prd:
-                user_input_prd_id = data[1][i][1]
+        user_input_prd_id = vis.display_options_retur(prd_list,'Products','product','2')
 
         # sql query, not var input from above return
         sql = "SELECT \
@@ -126,30 +90,30 @@ def mn_func_2(db: object, user_id: int) -> bool:
                 FROM product_sellers prcsel \
                 INNER JOIN products prd ON prd.product_id = prcsel.product_id \
                 INNER JOIN sellers sel ON sel.seller_id = prcsel.seller_id \
-                WHERE prd.product_description = (?) \
+                WHERE prd.product_id = (?) \
                 ORDER BY sel.seller_name;"
         
-        data = db.query(sql,(user_input_prd,))
+        data = db.query(sql,(user_input_prd_id,))        
         prd_list = []
 
         # Pull cat value & enumirate list for options func
         # display results & request userinput
         # end var = userinput index return from selection
         for i in range(len(data[1])):
-            prd_list.append((i+1,data[1][i][0]))
+            prd_list.append((i+1,data[1][i][0],data[1][i][1],data[1][i][2]))
 
-        user_input_sel = vis.display_options(prd_list,'Sellers who sell this product','seller')
+        user_input_sel_id = vis.display_options_retur(prd_list,'Sellers who sell this product','seller','3')
         
-        # get sel nam
-        for i in range(len(prd_list[i])):
-            if prd_list[i][0] == user_input_sel:
-                user_input_sel = prd_list[i][1]
-
-        # get actual price, seller_id
-        for i in range(len(data[1])):
-            if data[1][i][0] == user_input_sel:
-                user_input_price = data[1][i][1]
-                user_input_seller = data[1][i][2]
+        sql = "SELECT \
+            prcsel.price \
+            FROM product_sellers prcsel \
+            INNER JOIN products prd ON prd.product_id = prcsel.product_id \
+            INNER JOIN sellers sel ON sel.seller_id = prcsel.seller_id \
+            WHERE prd.product_id = (?) \
+            AND sel.seller_id = (?);"   
+        
+        data = db.query(sql,(user_input_prd_id,user_input_sel_id))        
+        user_input_price = data[1][0][0]
 
         # User qty input data validation
         user_input_qty = 0
@@ -165,14 +129,12 @@ def mn_func_2(db: object, user_id: int) -> bool:
 
         # get backet id if exist
         # else, create backet id, get and insert into basket_contents
-        basket_id = mn_return_prv_basket(db, user_id)
-        
         if not basket_id:
             # create new basket
             sql = "INSERT INTO shopper_baskets (shopper_id, basket_created_date_time) VALUES((?),DATE('now'));"
             db.insert(sql,(user_id,))
             db.commit()
-            basket_id = mn_return_prv_basket(db, user_id)
+            basket_id = usimp.return_prv_basket(db, user_id) 
         
         # with basket_id, add values to the basket_contents
         sql = "SELECT basket_id \
@@ -185,25 +147,25 @@ def mn_func_2(db: object, user_id: int) -> bool:
 
         # If data returned, return basket_id
         if len(data[1]) > 0:
-            print(f"\n *** Item '{user_input_prd}' is already within basket, to update/remove item. Please use the options from main menu *** \n")
+            print(f"\n *** Item '{user_input_prd_id}' is already within basket, to update/remove item. Please use the options from main menu *** \n")
 
         else:
             sql = "INSERT INTO basket_contents (basket_id,product_id,seller_id,quantity,price) VALUES((?),(?),(?),(?),(?));"            
-            db.insert(sql,(basket_id,user_input_prd_id,user_input_seller,user_input_qty,user_input_price))
+            db.insert(sql,(basket_id,user_input_prd_id,user_input_sel_id,user_input_qty,user_input_price))
             db.commit()
             print('Item added to your basket')
 
 
     except Exception as err: # Exception Block. Return data to user & False
         print(f"\n\n** Unexpected {err=}, {type(err)=} ** \n\n")
+        print(f'Error occured : Rollback completed. \n')
         db.rollback()
         return False
 
 
-def mn_func_3(db: object, user_id: int) -> tuple | bool:
+def mn_func_3(db: object, user_id: int, basket_id: str) -> tuple | bool:
     """ Display current basket """
 
-    basket_id = mn_return_prv_basket(db, user_id)
     out_list_ret = False
 
     # with basket_id, add values to the basket_contents
@@ -253,8 +215,8 @@ def mn_func_3(db: object, user_id: int) -> tuple | bool:
         out_list.append(['', '', "Basket Total", '', '', backet_data[1][0][0]])
         data_list = tuple(out_list)
 
-        print('Basket Contents')
-        print('----------------')
+        print('\nBasket Contents')
+        print(f'----------------\n')
         vis.print_sql_data(header_list,data_list)
     else:
         print('Your basket is empty')
@@ -265,13 +227,13 @@ def mn_func_3(db: object, user_id: int) -> tuple | bool:
         return False
 
 
-def mn_func_4(db: object, user_id: int) -> bool:
+def mn_func_4(db: object, user_id: int, basket_id: str) -> bool:
     """ change qty within user basket """
 
     try:
         # print basket, return values in tuple
         # No data returned. return to main menu (None)
-        output_data = mn_func_3(db, user_id)
+        output_data = mn_func_3(db, user_id, basket_id)
 
         if not output_data:
             return False
@@ -282,7 +244,6 @@ def mn_func_4(db: object, user_id: int) -> bool:
         # Get user input qty as var for sql query
         user_promt_qty = 'Enter the new quantity of the item you want to change: '
         output_qty = usimp.check_user_imp_int(user_promt_qty, 'The quantity must be greater then zero')
-        basket_id = mn_return_prv_basket(db, user_id)
 
         # update basket item, inputs prd_id / basket_id & quantity
         sql = "UPDATE basket_contents SET quantity = (?) WHERE basket_id = (?) AND product_id = (?);"
@@ -290,29 +251,29 @@ def mn_func_4(db: object, user_id: int) -> bool:
         db.commit()
 
         # Reprint basket post update
-        mn_func_3(db, user_id)
+        mn_func_3(db, user_id, basket_id)
 
         return True
 
     except Exception as err: # Exception Block. Return data to user & False
         print(f"\n\n** Unexpected {err=}, {type(err)=} ** \n\n")
+        print(f'Error occured : Rollback completed. \n')
         db.rollback()
         return False  
 
-def mn_func_5(db: object, user_id: int) -> bool | None:
+def mn_func_5(db: object, user_id: int, basket_id: str) -> bool | None:
     """ Remove an item from your basket """
 
     try:        
         # print basket, return values in tuple
         # No data returned. return to main menu (None)
-        output_data = mn_func_3(db, user_id)
+        output_data = mn_func_3(db, user_id, basket_id)
 
         if not output_data:
             return None
         
         # check basket length, 2+ user choose else return 0 prd_id
         prd_id = usimp.check_user_imp_prd_id(db, output_data)
-        basket_id = mn_return_prv_basket(db, user_id)
 
         # get user confirmation of delete
         user_check = 0
@@ -330,24 +291,25 @@ def mn_func_5(db: object, user_id: int) -> bool | None:
                 db.delete(sql,(basket_id,prd_id))
 
                 # Reprint basket post update
-                mn_func_3(db, user_id)
+                mn_func_3(db, user_id, basket_id)
 
                 db.commit()
                 return True
         
     except Exception as err: # Exception Block. Return data to user & False
         print(f"\n\n** Unexpected {err=}, {type(err)=} ** \n\n")
+        print(f'Error occured : Rollback completed. \n')
         db.rollback()
         return False        
 
 
-def mn_func_6(db: object, user_id: int) -> bool | None:
+def mn_func_6(db: object, user_id: int, basket_id: str) -> bool | None:
     """ checkout your basket """
 
     try:
         # print basket, return values in tuple
         # No data returned. return to main menu (None)
-        output_data = mn_func_3(db, user_id)
+        output_data = mn_func_3(db, user_id, basket_id)
 
         if not output_data:
             return None
@@ -363,16 +325,14 @@ def mn_func_6(db: object, user_id: int) -> bool | None:
             
             elif user_check.upper() == 'Y':
 
-                basket_id = mn_return_prv_basket(db, user_id)
-
-                # create shopper_orders
-                sql = "INSERT INTO shopper_orders (shopper_id,order_date,order_status) VALUES((?),DATE('now'),'Placed');"            
-                db.insert(sql,(user_id,))
-
                 # get next order_id in sequence
                 sql = "SELECT MAX(order_id) FROM shopper_orders ORDER BY order_id DESC;"
                 order_id = db.query(sql, ())
                 order_id = int(order_id[1][0][0]) +1
+
+                # create shopper_orders
+                sql = "INSERT INTO shopper_orders (shopper_id,order_date,order_status) VALUES((?),DATE('now'),'Placed');"            
+                db.insert(sql,(user_id,))
 
                 # get basket_contents via basket_id
                 sql = "SELECT product_id,seller_id,quantity,price,'Placed' FROM basket_contents WHERE basket_id = (?);"            
@@ -384,6 +344,8 @@ def mn_func_6(db: object, user_id: int) -> bool | None:
                     data = list(data)
                     data.insert(0, order_id)
                     data = tuple(data)
+
+                    print(f'*** {data}  ***')
 
                     # create & get next id in sequence - shopper_orders data (order_id)
                     sql = "INSERT INTO ordered_products (order_id,product_id,seller_id,quantity,price,ordered_product_status) VALUES((?),(?),(?),(?),(?),(?));"            
@@ -401,5 +363,6 @@ def mn_func_6(db: object, user_id: int) -> bool | None:
             
     except Exception as err: # Exception Block. Return data to user & False
         print(f"\n\n** Unexpected {err=}, {type(err)=} ** \n\n")
+        print(f'Error occured : Rollback completed. \n')
         db.rollback()
-        return False
+        return False    
