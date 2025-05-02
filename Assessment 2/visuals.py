@@ -6,6 +6,9 @@ def display_options_retur(all_options: list, title:str, type: str, posit: str) -
     query_rows: must consist of two values - id and description i.e. the category_id and category_description.
     title: is some text to put above the list of options to act as a title.
     type: is used to customise the prompt to make it appropriate for what you want the user to select.
+    posit; this is the sql column poss. (index 1 - pos 0 is line sequce)
+
+    return. posit of the input data option
     """
     try:
         option_num = 1
@@ -25,14 +28,16 @@ def display_options_retur(all_options: list, title:str, type: str, posit: str) -
         selected_option = 0
 
         while selected_option > len(option_list) or selected_option == 0:
+            selected_option = 0
+            
             prompt = input("\nEnter the number against the "+type+" you want to choose: ")
             
             if not prompt.isnumeric():
                 print(f'\n* ERROR * : Please enter only numbers (int) ')
-                selected_option = 0
 
-            elif selected_option > len(option_list):
+            elif int(selected_option) > len(option_list):
                 print(f'\n* ERROR * : Please enter a number within the list')
+                selected_option = 0
 
             else:
                 selected_option = int(prompt)
@@ -81,8 +86,9 @@ def display_options(all_options: list, title:str, type: str) -> str | bool:
                 print(f'\n* ERROR * : Please enter only numbers (int)')
                 selected_option = 0
 
-            elif selected_option > len(option_list):
+            elif int(selected_option) > len(option_list):
                 print(f'\n* ERROR * : Please enter a number within the list')
+                selected_option = 0
                 
             else:
                 selected_option = int(prompt)
@@ -171,9 +177,6 @@ def exit_screen() -> None:
         '-------------------------------------'
         '\n'
         )
-    
-    quit()
-
 
 def print_sql_data(sql_headers: list, data: list) -> None:
     """

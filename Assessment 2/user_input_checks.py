@@ -1,5 +1,4 @@
 
-
 def return_prv_basket(db: object, user_id: int) -> int | bool:
     """ return previous basket if found from today """
 
@@ -21,6 +20,7 @@ def return_prv_basket(db: object, user_id: int) -> int | bool:
 
 def check_user_imp_int(text: str, err_reponse: str) -> int:
     """ check if value is above 0 """
+
     user_input_qty = 0
 
     while int(user_input_qty) <= 0:
@@ -34,6 +34,7 @@ def check_user_imp_int(text: str, err_reponse: str) -> int:
 
 
 def check_user_imp_prd_id(db: object, data: str) -> str:
+    """ user input checker - has to be int """
 
     try:
         # check basket length, 2+ user choose

@@ -279,7 +279,7 @@ def mn_func_5(db: object, user_id: int, basket_id: str) -> bool | None:
         user_check = 0
         
         while user_check != 'N' or user_check != 'Y':
-            user_check = input(f'Do you wish to remove item {prd_id} from your basket? Y/N  : ')
+            user_check = input(f'\nDo you wish to remove item {prd_id} from your basket? Y/N  : ')
 
             if user_check.upper() == 'N':
                 return None
@@ -344,8 +344,7 @@ def mn_func_6(db: object, user_id: int, basket_id: str) -> bool | None:
                     data = list(data)
                     data.insert(0, order_id)
                     data = tuple(data)
-
-                    print(f'*** {data}  ***')
+                    #print(f'*** {data}  ***')
 
                     # create & get next id in sequence - shopper_orders data (order_id)
                     sql = "INSERT INTO ordered_products (order_id,product_id,seller_id,quantity,price,ordered_product_status) VALUES((?),(?),(?),(?),(?),(?));"            
@@ -365,4 +364,4 @@ def mn_func_6(db: object, user_id: int, basket_id: str) -> bool | None:
         print(f"\n\n** Unexpected {err=}, {type(err)=} ** \n\n")
         print(f'Error occured : Rollback completed. \n')
         db.rollback()
-        return False    
+        return False

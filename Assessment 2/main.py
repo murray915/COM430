@@ -16,11 +16,14 @@ with dab.Database("parana.db") as db:
         
         while main_selection != 7:
             main_selection = vis.main_menu()
-            basket_id = usimp.return_prv_basket(db, user_id) 
+            print('')
+            
+            basket_id = usimp.return_prv_basket(db, user_id)
 
-            # Call user_input func 7 = exit
-            if main_selection != 7:
+            if main_selection == 7:
+                vis.exit_screen()
+                break
+
+            else:
                 func = getattr(optpr, 'mn_func_' + str(main_selection))
                 output = func(db, user_id, basket_id)
-
-    vis.exit_screen()
