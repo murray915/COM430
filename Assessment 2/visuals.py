@@ -28,16 +28,14 @@ def display_options_retur(all_options: list, title:str, type: str, posit: str) -
         selected_option = 0
 
         while selected_option > len(option_list) or selected_option == 0:
-            selected_option = 0
             
             prompt = input("\nEnter the number against the "+type+" you want to choose: ")
             
             if not prompt.isnumeric():
                 print(f'\n* ERROR * : Please enter only numbers (int) ')
 
-            elif int(selected_option) > len(option_list):
+            elif int(prompt) > len(option_list):
                 print(f'\n* ERROR * : Please enter a number within the list')
-                selected_option = 0
 
             else:
                 selected_option = int(prompt)
@@ -86,7 +84,7 @@ def display_options(all_options: list, title:str, type: str) -> str | bool:
                 print(f'\n* ERROR * : Please enter only numbers (int)')
                 selected_option = 0
 
-            elif int(selected_option) > len(option_list):
+            elif int(prompt) > len(option_list):
                 print(f'\n* ERROR * : Please enter a number within the list')
                 selected_option = 0
                 
